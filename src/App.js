@@ -1,11 +1,7 @@
-import "./App.css";
-import * as React from "react";
-//import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
-import PersonAddIcon from "@mui/icons-material/PersonAdd"; // Ensure this is correctly imported
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import Avatar from "@mui/material/Avatar"; // Import Avatar component
-import PermIdentityIcon from "@mui/icons-material/PermIdentity";
-import DeleteIcon from "@mui/icons-material/Delete";
+import React from "react";
+import { useForm, Controller } from "react-hook-form";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 import {
   Container,
   Box,
@@ -17,131 +13,120 @@ import {
   InputLabel,
   Button,
   IconButton,
-  Alert,
   FormHelperText,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Avatar,
 } from "@mui/material";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import DeleteIcon from "@mui/icons-material/Delete";
+import PermIdentityIcon from "@mui/icons-material/PermIdentity";
+
+// Define validation schema with Yup
+const schema = yup.object().shape({
+  firstName: yup
+    .string()
+    .matches(/^[A-Za-z]+$/, "Only letters are allowed")
+    .required("First name is required"),
+  lastName: yup
+    .string()
+    .matches(/^[A-Za-z]+$/, "Only letters are allowed")
+    .required("Last name is required"),
+  email: yup
+    .string()
+    .email("Invalid email format")
+    .required("Email is required"),
+  phoneNumber: yup
+    .string()
+    .matches(/^[0-9]+$/, "Phone number must be digits only")
+    .required("Phone number is required"),
+  address: yup.string().required("Address is required"),
+  city: yup.string().required("City is required"),
+  zip: yup
+    .string()
+    .matches(/^[0-9]+$/, "Zip must be digits only")
+    .required("Zip is required"),
+  state: yup.string().required("State is required"),
+  gender: yup.string().required("Gender is required"),
+  birthday: yup
+    .date()
+    .required("Birthday is required")
+    .max(new Date(), "Birthday cannot be in the future"), // Ensures the date is not in the future
+
+  file: yup.mixed().required("Image File is required"),
+});
 
 function App() {
-  const [firstName, setFirstName] = React.useState("");
-  const [lastName, setLastName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [phoneNumber, setPhoneNumber] = React.useState("");
-  const [address, setAddress] = React.useState("");
-  const [city, setCity] = React.useState("");
-  const [zip, setZip] = React.useState("");
-  const [birthday, setBirthday] = React.useState("");
-  const [gender, setGender] = React.useState("");
-  const [state, setState] = React.useState("");
-  const [filePreview, setFilePreview] = React.useState("");
-  const [profile, setProfile] = React.useState(
-    "Ali Developer\nSenior Software Engineer\nNew York"
-  );
-  const [isFocused, setIsFocused] = React.useState(false);
-  const [fileName, setFileName] = React.useState("");
-  const [formError, setFormError] = React.useState("");
-  const [errors, setErrors] = React.useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    address: "",
-    city: "",
-    zip: "",
-    state: "",
-    gender: "",
+  const {
+    control,
+    handleSubmit,
+
+    setValue,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "onTouched",
   });
+
+  const [filePreview, setFilePreview] = React.useState("");
+  const [fileName, setFileName] = React.useState("");
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-
-  const handleFileRemove = (event) => {
-    // Reset file preview and name
-    event.stopPropagation(); // Prevent triggering file input
-
-    setFilePreview("");
-    setFileName("");
-    URL.revokeObjectURL(filePreview);
+  const [isFocused, setIsFocused] = React.useState(false); // Define isFocused state
+  const [profile, setProfile] = React.useState(
+    "Ayesha Developer\nSenior Software Engineer\nNew York"
+  ); // Define profile state
+  const onSubmit = (data) => {
+    console.log(data);
+    setOpenConfirmDialog(true);
   };
 
-  const handleGenderChange = (event) => {
-    setGender(event.target.value);
-  };
-
-  const handleStateChange = (event) => {
-    setState(event.target.value);
-  };
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // Create a URL for the file and set it in state
-      const fileUrl = URL.createObjectURL(file);
-      setFilePreview(fileUrl);
-      setFileName(file.name); // Update fileName state with the selected file's name
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB.");
+        return;
+      }
+
+      // Create an image element to check dimensions
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        // Check if the image is square (1:1 ratio)
+        if (img.width !== img.height) {
+          alert("Image must be square (1:1 ratio).");
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+
+        // If all checks pass
+        setFilePreview(objectUrl);
+        setFileName(file.name);
+        setValue("file", file); // Set the file value in react-hook-form
+      };
+
+      img.src = objectUrl;
+
+      // Clean up object URL after the image is loaded
+      img.onloadend = () => {
+        URL.revokeObjectURL(objectUrl);
+      };
     }
   };
 
-  const handleSubmit = () => {
-    let valid = true;
-    const newErrors = { ...errors };
-
-    // Validation logic
-    if (!firstName) {
-      newErrors.firstName = "First name is required.";
-      valid = false;
-    }
-    if (!lastName) {
-      newErrors.lastName = "Last name is required.";
-      valid = false;
-    }
-    if (!email) {
-      newErrors.email = "Email is required.";
-      valid = false;
-    }
-    if (!phoneNumber) {
-      newErrors.phoneNumber = "Phone number is required.";
-      valid = false;
-    }
-    if (!address) {
-      newErrors.address = "Address is required.";
-      valid = false;
-    }
-    if (!city) {
-      newErrors.city = "City is required.";
-      valid = false;
-    }
-    if (!zip) {
-      newErrors.zip = "Zip is required.";
-      valid = false;
-    }
-    if (!state) {
-      newErrors.state = "State is required.";
-      valid = false;
-    }
-    if (!gender) {
-      newErrors.gender = "Gender is required.";
-      valid = false;
-    }
-    if (!fileName) {
-      newErrors.fileName = "File is required.";
-      valid = false;
-    }
-    if (!birthday) {
-      newErrors.birthday = "Birthday is required.";
-      valid = false;
-    }
-
-    setErrors(newErrors);
-
-    if (valid) {
-      // Submit form
-      setFormError("");
-      setOpenConfirmDialog(true);
-    } else {
-      setFormError("Please correct the errors in the form.");
-    }
+  const handleFileRemove = (event) => {
+    event.stopPropagation(); // Prevent triggering file input
+    setFilePreview("");
+    setFileName("");
+    setValue("file", null); // Reset the file value in react-hook-form
+    URL.revokeObjectURL(filePreview);
   };
+
   const handleConfirmSubmit = () => {
     // Submit the form data here...
     console.log("Form submitted!");
@@ -174,8 +159,6 @@ function App() {
           marginTop: "1rem",
         }}
       >
-        {formError && <Alert severity="error">{formError}</Alert>}
-
         <Typography variant="h4" component="h1" gutterBottom>
           General Information
         </Typography>
@@ -188,25 +171,35 @@ function App() {
             marginBottom: 2, // Adds space below this row
           }}
         >
-          <TextField
-            required
-            label="First Name"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.firstName}
-            helperText={errors.firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+          <Controller
+            name="firstName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="First Name"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.firstName}
+                helperText={errors.firstName?.message}
+              />
+            )}
           />
-          <TextField
-            required
-            label="Last Name"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.lastName}
-            helperText={errors.lastName}
-            onChange={(e) => setLastName(e.target.value)}
+          <Controller
+            name="lastName"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Last Name"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.lastName}
+                helperText={errors.lastName?.message}
+              />
+            )}
           />
         </Box>
         <Box
@@ -216,35 +209,41 @@ function App() {
             marginBottom: 2, // Adds space below this row
           }}
         >
-          <TextField
-            fullWidth
-            required
-            label="Birthday"
-            variant="outlined"
-            margin="normal"
-            type="date"
-            slotProps={{
-              inputLabel: { shrink: true }, // Updated to use slotProps
-            }}
-            error={!!errors.birthday}
-            helperText={errors.birthday}
-            onChange={(e) => setBirthday(e.target.value)}
+          <Controller
+            name="birthday"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Birthday"
+                variant="outlined"
+                margin="normal"
+                type="date"
+                max
+                slotProps={{
+                  inputLabel: { shrink: true }, // Updated to use slotProps
+                }}
+                fullWidth
+                error={!!errors.birthday}
+                helperText={errors.birthday?.message}
+              />
+            )}
           />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Gender</InputLabel>
-            <Select
-              value={gender}
-              onChange={handleGenderChange}
-              label="Gender"
-              error={!!errors.gender}
-              helperText={errors.gender}
-            >
-              <MenuItem value="male">male</MenuItem>
-              <MenuItem value="female">Female</MenuItem>
-              <MenuItem value="other">Other</MenuItem>
-              {/* Add more states as needed */}
-            </Select>
-          </FormControl>
+          <Controller
+            name="gender"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Gender</InputLabel>
+                <Select {...field} label="Gender" error={!!errors.gender}>
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+                <FormHelperText>{errors.gender?.message}</FormHelperText>
+              </FormControl>
+            )}
+          />
         </Box>
         <Box
           sx={{
@@ -253,25 +252,35 @@ function App() {
             marginBottom: 2, // Adds space below this row
           }}
         >
-          <TextField
-            required
-            label="Email"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.email}
-            helperText={!!errors.email}
-            onChange={(e) => setEmail(e.target.value)}
+          <Controller
+            name="email"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Email"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.email}
+                helperText={errors.email?.message}
+              />
+            )}
           />
-          <TextField
-            required
-            label="Phone Number"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.phoneNumber}
-            helperText={errors.phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
+          <Controller
+            name="phoneNumber"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Phone Number"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.phoneNumber}
+                helperText={errors.phoneNumber?.message}
+              />
+            )}
           />
         </Box>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -284,24 +293,36 @@ function App() {
             marginBottom: 2, // Adds space below this row
           }}
         >
-          <TextField
-            label="Address"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.address}
-            helperText={errors.address}
-            onChange={(e) => setAddress(e.target.value)}
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Address"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.address}
+                helperText={errors.address?.message}
+              />
+            )}
           />
-          <TextField
-            label="NO"
-            variant="outlined"
-            margin="normal"
-            type="number"
-            fullWidth
-            error={!!errors.zip}
-            helperText={errors.zip}
-            onChange={(e) => setZip(e.target.value)}
+          <Controller
+            name="No"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="No"
+                variant="outlined"
+                margin="normal"
+                type="number"
+                fullWidth
+                error={!!errors.zip}
+                helperText={errors.zip?.message}
+              />
+            )}
           />
         </Box>
         <Box
@@ -311,40 +332,53 @@ function App() {
             marginBottom: 2, // Adds space below this row
           }}
         >
-          <TextField
-            label="City"
-            variant="outlined"
-            margin="normal"
-            fullWidth
-            error={!!errors.city}
-            helperText={errors.city}
-            onChange={(e) => setCity(e.target.value)}
+          <Controller
+            name="city"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="City"
+                variant="outlined"
+                margin="normal"
+                fullWidth
+                error={!!errors.city}
+                helperText={errors.city?.message}
+              />
+            )}
           />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>State</InputLabel>
-            <Select
-              value={state}
-              onChange={handleStateChange}
-              label="State"
-              error={!!errors.state}
-            >
-              <MenuItem value="pu">Punjab</MenuItem>
-              <MenuItem value="sn">Sindh</MenuItem>
-              <MenuItem value="bch">Balochistan</MenuItem>
-              <MenuItem value="kpk">Khyber Pakhtunkhwa</MenuItem>
-              {/* Add more states as needed */}
-            </Select>
-            <FormHelperText>{errors.state}</FormHelperText>
-          </FormControl>
-          <TextField
-            label="Zip"
-            variant="outlined"
-            margin="normal"
-            type="number"
-            fullWidth
-            error={!!errors.zip}
-            helperText={errors.zip}
-            onChange={(e) => setZip(e.target.value)}
+          <Controller
+            name="state"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth margin="normal">
+                <InputLabel>State</InputLabel>
+                <Select {...field} label="State" error={!!errors.state}>
+                  <MenuItem value="pu">Punjab</MenuItem>
+                  <MenuItem value="sn">Sindh</MenuItem>
+                  <MenuItem value="bch">Balochistan</MenuItem>
+                  <MenuItem value="kpk">Khyber Pakhtunkhwa</MenuItem>
+                </Select>
+                <FormHelperText>{errors.state?.message}</FormHelperText>
+              </FormControl>
+            )}
+          />
+
+          <Controller
+            name="zip"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Zip"
+                variant="outlined"
+                margin="normal"
+                type="number"
+                fullWidth
+                error={!!errors.zip}
+                helperText={errors.zip?.message}
+              />
+            )}
           />
         </Box>
         <Button
@@ -354,14 +388,14 @@ function App() {
             backgroundColor: "black",
             textTransform: "none",
           }}
-          onClick={handleSubmit}
+          onClick={handleSubmit(onSubmit)} // onSubmit is passed here
         >
           Save All
         </Button>
       </Box>
       <Box
         sx={{
-          width: "30%", // Second Box covers 30% of the page width
+          width: "40%", // Second Box covers 30% of the page width
           height: "60vh", // 70% of the viewport height
           boxShadow: 3,
           borderRadius: 2,
@@ -444,34 +478,36 @@ function App() {
             />
           )}
         </Box>
-        <Button
-          variant="contained"
-          color="primary"
+        <Box
           sx={{
-            marginTop: "1rem",
-            marginLeft: "6rem",
+            display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: "black",
-            textTransform: "none",
-          }}
-          startIcon={<PersonAddIcon />}
-        >
-          Connect
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{
-            marginTop: "1rem",
-            marginLeft: "1rem",
-            justifyContent: "center",
-            alignItems: "center",
-            textTransform: "none",
+            gap: "1rem", // Space between the buttons
+            marginTop: "2rem",
           }}
         >
-          send message
-        </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{
+              backgroundColor: "black",
+              textTransform: "none",
+            }}
+            startIcon={<PersonAddIcon />}
+          >
+            Connect
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{
+              textTransform: "none",
+            }}
+          >
+            send message
+          </Button>
+        </Box>
 
         <Box
           sx={{
@@ -480,13 +516,19 @@ function App() {
             boxShadow: 3,
             borderRadius: 2,
             backgroundColor: "white",
-            marginTop: "6rem", // Adds space above the Box
+            marginTop: "5rem", // Adds space above the Box
             marginLeft: "0rem", // Aligns with the existing second box
           }}
         >
-          <Typography variant="h6" component="h2" sx={{ padding: "0.5rem" }}>
+          <Typography
+            variant="h6"
+            component="h2"
+            sx={{ padding: "0.5rem" }}
+            gutterBottom
+          >
             Select profile photo{" "}
           </Typography>
+
           <Button
             variant="standard"
             component="label"
@@ -523,7 +565,7 @@ function App() {
                   </Typography>
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <IconButton onClick={handleFileRemove} sx={{ padding: 0 }}>
+                  <IconButton onClick={handleFileRemove} sx={{ padding: 5 }}>
                     <DeleteIcon />
                   </IconButton>
                 </div>
@@ -541,6 +583,15 @@ function App() {
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
         </Box>
+        {errors.file && (
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{ marginTop: "0.5rem" }}
+          >
+            {errors.file.message}
+          </Typography>
+        )}
       </Box>
       <Dialog open={openConfirmDialog} onClose={handleCancelSubmit}>
         <DialogTitle>Confirm Submission</DialogTitle>
