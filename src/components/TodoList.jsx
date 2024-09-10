@@ -10,6 +10,8 @@ import {
   Select,
   MenuItem,
   FormControl,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -67,6 +69,9 @@ function TodoList() {
   const [selectedDate, setselectedDate] = React.useState(null);
   const [filter, setFilter] = useState("All");
   const [sort, setSort] = useState("Added date");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const handleDateChange = (newDate) => {
     setselectedDate(newDate);
   };
@@ -99,11 +104,17 @@ function TodoList() {
           date: selectedDate,
         },
       ]);
+      setSnackbarMessage("Task added successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
     } else {
       setTodos([
         ...todos,
         { val: inputVal, isDone: false, id: editedId, date: selectedDate },
       ]);
+      setSnackbarMessage("Task edited successfully!");
+      setSnackbarSeverity("info");
+      setSnackbarOpen(true);
     }
     setInputVal("");
     setIsEdited(false);
@@ -112,6 +123,9 @@ function TodoList() {
   const onDelete = (id) => {
     const newTodos = todos.filter((todo) => todo.id !== id);
     setTodos(newTodos);
+    setSnackbarMessage("Task deleted successfully!");
+    setSnackbarSeverity("error");
+    setSnackbarOpen(true);
   };
 
   const handleDone = (id) => {
@@ -122,6 +136,9 @@ function TodoList() {
       return todo;
     });
     setTodos(updated);
+    setSnackbarMessage("Task marked as done!");
+    setSnackbarSeverity("success");
+    setSnackbarOpen(true);
   };
 
   const handleEdit = (id) => {
@@ -132,6 +149,8 @@ function TodoList() {
     setselectedDate(editVal.date);
     setTodos(newTodos);
     setIsEdited(true);
+    setSnackbarMessage("Task edited successfully!");
+    setSnackbarSeverity("info");
   };
   // Filter logic
   const filteredTodos =
@@ -148,6 +167,9 @@ function TodoList() {
       : sort === "Completed first"
       ? filteredTodos.sort((a, b) => (a.isDone ? -1 : 1))
       : filteredTodos.sort((a, b) => (b.isDone ? -1 : 1));
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   return (
     <Container
@@ -319,6 +341,20 @@ function TodoList() {
             );
           })}
         </List>
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbarSeverity}
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
       </Box>
     </Container>
   );
