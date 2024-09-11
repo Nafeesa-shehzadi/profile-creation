@@ -12,6 +12,11 @@ import {
   FormControl,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -72,6 +77,10 @@ function TodoList() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [taskToConfirm, setTaskToConfirm] = useState(null);
+  const [actionType, setActionType] = useState("");
+
   const handleDateChange = (newDate) => {
     setselectedDate(newDate);
   };
@@ -112,20 +121,16 @@ function TodoList() {
         ...todos,
         { val: inputVal, isDone: false, id: editedId, date: selectedDate },
       ]);
-      setSnackbarMessage("Task edited successfully!");
-      setSnackbarSeverity("info");
-      setSnackbarOpen(true);
+      setDialogOpen(true);
     }
     setInputVal("");
     setIsEdited(false);
     setselectedDate(null); // Clear selected date after adding or editing task
   };
   const onDelete = (id) => {
-    const newTodos = todos.filter((todo) => todo.id !== id);
-    setTodos(newTodos);
-    setSnackbarMessage("Task deleted successfully!");
-    setSnackbarSeverity("error");
-    setSnackbarOpen(true);
+    setTaskToConfirm({ id });
+    setActionType("delete");
+    setDialogOpen(true);
   };
 
   const handleDone = (id) => {
@@ -142,16 +147,21 @@ function TodoList() {
   };
 
   const handleEdit = (id) => {
-    const newTodos = todos.filter((todo) => todo.id !== id);
     const editVal = todos.find((todo) => todo.id === id);
-    setEditedId(editVal.id);
-    setInputVal(editVal.val);
-    setselectedDate(editVal.date);
-    setTodos(newTodos);
-    setIsEdited(true);
-    setSnackbarMessage("Task edited successfully!");
-    setSnackbarSeverity("info");
+    if (editVal) {
+      setInputVal(editVal.val);
+      setselectedDate(editVal.date);
+      setIsEdited(true);
+      setEditedId(editVal.id);
+      const newTodos = todos.map((todo) =>
+        todo.id === editVal.id
+          ? { ...todo, val: editVal.val, date: editVal.date }
+          : todo
+      );
+      setTodos(newTodos);
+    }
   };
+
   // Filter logic
   const filteredTodos =
     filter === "All"
@@ -170,7 +180,6 @@ function TodoList() {
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
-
   return (
     <Container
       component="main"
@@ -356,6 +365,54 @@ function TodoList() {
           </Alert>
         </Snackbar>
       </Box>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+      >
+        <DialogTitle id="confirm-dialog-title">
+          {actionType === "delete" ? "Confirm Deletion" : "Confirm Edit"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-dialog-description">
+            {actionType === "delete"
+              ? "Are you sure you want to delete this task?"
+              : "Are you sure you want to edit this task?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)} color="primary">
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (actionType === "delete" && taskToConfirm) {
+                const { id } = taskToConfirm;
+                const newTodos = todos.filter((todo) => todo.id !== id);
+                setTodos(newTodos);
+                setSnackbarMessage("Task deleted successfully!");
+                setSnackbarSeverity("error");
+                setSnackbarOpen(true);
+              } else if (actionType === "edit" && taskToConfirm) {
+                const { id, val, date } = taskToConfirm;
+                const updatedTodos = todos.map((todo) =>
+                  todo.id === id ? { ...todo, val, date } : todo
+                );
+                setTodos(updatedTodos);
+                setSnackbarMessage("Task edited successfully!");
+                setSnackbarSeverity("info");
+                setSnackbarOpen(true);
+              }
+              setDialogOpen(false);
+            }}
+            color="primary"
+            autoFocus
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
